@@ -8,10 +8,20 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17' }
       - run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
-      - run: unzip -q SR2-Phase1.zip
-      - run: chmod +x SR2-Phase1/gradlew
-      - run: cd SR2-Phase1 && ./gradlew --no-daemon assembleRelease
+      - name: Locate project
+        run: |
+          Z=$(find . -iname 'SR2-Phase1*.zip' | head -1)
+          if [ -n "$Z" ]; then
+            unzip -q -o "$Z" -d /tmp/p
+            echo "PROJ=/tmp/p/SR2-Phase1" >> $GITHUB_ENV
+          elif [ -f gradlew ]; then
+            echo "PROJ=$PWD" >> $GITHUB_ENV
+          else
+            ls -R | head -50; exit 1
+          fi
+      - run: chmod +x "$PROJ/gradlew"
+      - run: cd "$PROJ" && ./gradlew --no-daemon assembleRelease
       - uses: actions/upload-artifact@v4
         with:
           name: SegaRally2-apk
-          path: SR2-Phase1/app/build/outputs/apk/release/*.apk
+          path: ${{ env.PROJ }}/app/build/outputs/apk/release/*.apk
